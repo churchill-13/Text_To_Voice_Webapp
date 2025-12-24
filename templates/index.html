@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Multi-Language Text to Voice</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body { font-family: Segoe UI, Arial; background:#f4f6f8; }
+.app { max-width:720px; margin:30px auto; background:#fff; padding:25px; border-radius:10px; }
+label { font-weight:600; margin-top:15px; display:block; }
+textarea, select, button { width:100%; padding:12px; margin-top:8px; }
+button { border:none; border-radius:6px; cursor:pointer; }
+.demo { background:#e9ecef; }
+.preview { background:#dee2e6; }
+.generate { background:#0d6efd; color:white; }
+.spinner {
+    display:none;
+    text-align:center;
+    margin-top:15px;
+}
+.spinner span {
+    display:inline-block;
+    width:10px;
+    height:10px;
+    background:#0d6efd;
+    border-radius:50%;
+    animation:bounce 1.4s infinite both;
+}
+.spinner span:nth-child(2){animation-delay:.2s}
+.spinner span:nth-child(3){animation-delay:.4s}
+@keyframes bounce{
+  0%,80%,100%{transform:scale(0)}
+  40%{transform:scale(1)}
+}
+footer { text-align:center; margin-top:20px; color:#777; }
+</style>
+</head>
+
+<body>
+<div class="app">
+<h2>Multi-Language Text to Voice</h2>
+
+<label>Enter Text</label>
+<textarea id="text" maxlength="5000"></textarea>
+
+<label>Language</label>
+<select id="language">
+<option>English</option>
+<option>Tamil</option>
+<option>Hindi</option>
+<option>Chinese</option>
+</select>
+
+<label>Gender</label>
+<select id="gender">
+<option>Female</option>
+<option>Male</option>
+</select>
+
+<label>Voice</label>
+<select id="voice"></select>
+
+<button class="demo" onclick="demo()">🎙 Demo</button>
+<button class="preview" onclick="preview()">🔊 Preview</button>
+
+<form method="post" action="/generate" onsubmit="beforeGenerate()">
+<input type="hidden" name="text" id="hText">
+<input type="hidden" name="voice" id="hVoice">
+<button class="generate">🎧 Generate & Download</button>
+</form>
+
+<div class="spinner" id="spinner">
+<span></span><span></span><span></span>
+<p>Generating audio…</p>
+</div>
+
+<audio id="player" controls style="width:100%; display:none; margin-top:10px;"></audio>
+
+<footer>© 2025 Churchill J</footer>
+</div>
+
+<script>
+const VOICES={
+English:{Female:["en-US-JennyNeural","en-US-AriaNeural"],Male:["en-US-GuyNeural","en-US-DavisNeural"]},
+Tamil:{Female:["ta-IN-PallaviNeural"],Male:["ta-IN-ValluvarNeural"]},
+Hindi:{Female:["hi-IN-SwaraNeural"],Male:["hi-IN-MadhurNeural"]},
+Chinese:{Female:["zh-CN-XiaoxiaoNeural"],Male:["zh-CN-YunxiNeural"]}
+};
+
+const lang=document.getElementById("language");
+const gender=document.getElementById("gender");
+const voice=document.getElementById("voice");
+const spinner=document.getElementById("spinner");
+const player=document.getElementById("player");
+
+function updateVoices(){
+ voice.innerHTML="";
+ VOICES[lang.value][gender.value].forEach(v=>{
+   let o=document.createElement("option");
+   o.value=v; o.text=v;
+   voice.appendChild(o);
+ });
+}
+lang.onchange=gender.onchange=updateVoices;
+updateVoices();
+
+function showSpinner(s){ spinner.style.display=s?"block":"none"; }
+
+function demo(){
+ showSpinner(true);
+ fetch("/demo",{method:"POST",headers:{"Content-Type":"application/json"},
+ body:JSON.stringify({language:lang.value,voice:voice.value})})
+ .then(r=>r.json()).then(d=>{
+   player.src=d.audio; player.style.display="block"; player.play();
+   showSpinner(false);
+ });
+}
+
+function preview(){
+ showSpinner(true);
+ fetch("/preview",{method:"POST",headers:{"Content-Type":"application/json"},
+ body:JSON.stringify({text:document.getElementById("text").value,voice:voice.value})})
+ .then(r=>r.json()).then(d=>{
+   player.src=d.audio; player.style.display="block"; player.play();
+   showSpinner(false);
+ });
+}
+
+function beforeGenerate(){
+ document.getElementById("hText").value=document.getElementById("text").value;
+ document.getElementById("hVoice").value=voice.value;
+ showSpinner(true);
+}
+</script>
+</body>
+</html>

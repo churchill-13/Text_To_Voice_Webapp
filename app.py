@@ -1,20 +1,21 @@
-app.run(host="0.0.0.0", port=5000, debug=True)
 from flask import Flask, render_template, request, send_file, jsonify, session
 import edge_tts
 import asyncio
 import os
 import time
 import uuid
-from collections import deque
 
+# ================= APP SETUP =================
 app = Flask(__name__)
-app.secret_key = "edge-tts-secret-key"  # change later
+app.secret_key = "edge-tts-secret-key"  # can change later
 
-BASE_OUTPUT = "output/sessions"
+# ================= DIRECTORIES =================
+BASE_OUTPUT = os.path.join(os.path.dirname(__file__), "output", "sessions")
 os.makedirs(BASE_OUTPUT, exist_ok=True)
 
 MAX_FILES_PER_SESSION = 10
 
+# ================= DEMO TEXT =================
 DEMO_TEXT = {
     "English": "This is a demo voice preview.",
     "Tamil": "இது ஒரு மாதிரி குரல் முன்னோட்டம்.",
@@ -22,14 +23,16 @@ DEMO_TEXT = {
     "Chinese": "这是一个示例语音预览。"
 }
 
-# ---------------- SESSION SETUP ----------------
+# ================= SESSION HELPERS =================
 def get_session_folder():
     if "sid" not in session:
         session["sid"] = str(uuid.uuid4())
         session["files"] = []
+
     folder = os.path.join(BASE_OUTPUT, session["sid"])
     os.makedirs(folder, exist_ok=True)
     return folder
+
 
 def cleanup_old_files():
     files = session.get("files", [])
@@ -41,13 +44,13 @@ def cleanup_old_files():
             pass
     session["files"] = files
 
-# ---------------- HOME ----------------
+# ================= ROUTES =================
 @app.route("/")
 def index():
     get_session_folder()
     return render_template("index.html")
 
-# ---------------- GENERATE & DOWNLOAD ----------------
+# -------- GENERATE & DOWNLOAD --------
 @app.route("/generate", methods=["POST"])
 def generate():
     text = request.form.get("text")
@@ -61,7 +64,10 @@ def generate():
     filepath = os.path.join(folder, filename)
 
     async def tts():
-        communicate = edge_tts.Communicate(text=text.strip(), voice=voice)
+        communicate = edge_tts.Communicate(
+            text=text.strip(),   # ONLY user text
+            voice=voice
+        )
         await communicate.save(filepath)
 
     asyncio.run(tts())
@@ -71,7 +77,7 @@ def generate():
 
     return send_file(filepath, as_attachment=True)
 
-# ---------------- PREVIEW ----------------
+# -------- PREVIEW --------
 @app.route("/preview", methods=["POST"])
 def preview():
     data = request.json
@@ -86,7 +92,10 @@ def preview():
     filepath = os.path.join(folder, filename)
 
     async def tts():
-        communicate = edge_tts.Communicate(text=text.strip(), voice=voice)
+        communicate = edge_tts.Communicate(
+            text=text.strip(),
+            voice=voice
+        )
         await communicate.save(filepath)
 
     asyncio.run(tts())
@@ -96,7 +105,7 @@ def preview():
 
     return jsonify({"audio": f"/audio/{session['sid']}/{filename}"})
 
-# ---------------- DEMO ----------------
+# -------- DEMO --------
 @app.route("/demo", methods=["POST"])
 def demo():
     data = request.json
@@ -112,7 +121,10 @@ def demo():
     filepath = os.path.join(folder, filename)
 
     async def tts():
-        communicate = edge_tts.Communicate(text=text, voice=voice)
+        communicate = edge_tts.Communicate(
+            text=text,
+            voice=voice
+        )
         await communicate.save(filepath)
 
     asyncio.run(tts())
@@ -122,12 +134,12 @@ def demo():
 
     return jsonify({"audio": f"/audio/{session['sid']}/{filename}"})
 
-# ---------------- SERVE AUDIO ----------------
+# -------- SERVE AUDIO --------
 @app.route("/audio/<sid>/<filename>")
 def serve_audio(sid, filename):
     return send_file(os.path.join(BASE_OUTPUT, sid, filename))
 
-# ---------------- RUN ----------------
+# ================= RENDER SAFE RUN =================
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT", 5000))  # REQUIRED by Render
     app.run(host="0.0.0.0", port=port)
