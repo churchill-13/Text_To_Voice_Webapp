@@ -1,120 +1,167 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>Multi-Language Text to Voice</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<!-- ✅ FAVICON -->
+<link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+
 <style>
-body { font-family: Segoe UI, Arial; background:#f4f6f8; }
-.app { max-width:720px; margin:30px auto; background:#fff; padding:25px; border-radius:10px; }
-label { font-weight:600; margin-top:15px; display:block; }
-textarea, select, button { width:100%; padding:12px; margin-top:8px; }
-button { border:none; border-radius:6px; cursor:pointer; }
+body {
+    font-family: Segoe UI, Arial, sans-serif;
+    background:#f4f6f8;
+}
+
+.app {
+    max-width:720px;
+    margin:40px auto;
+    background:#fff;
+    padding:30px;
+    border-radius:12px;
+    box-shadow:0 10px 25px rgba(0,0,0,0.08);
+}
+
+.logo {
+    position:absolute;
+    top:20px;
+    right:20px;
+}
+
+.logo img {
+    height:55px;
+}
+
+label {
+    font-weight:600;
+    margin-top:15px;
+    display:block;
+}
+
+textarea, select, button {
+    width:100%;
+    padding:12px;
+    margin-top:8px;
+    border-radius:6px;
+    border:1px solid #ccc;
+}
+
+button {
+    border:none;
+    cursor:pointer;
+    font-weight:600;
+}
+
 .demo { background:#e9ecef; }
 .preview { background:#dee2e6; }
-.generate { background:#0d6efd; color:white; }
-.spinner { display:none; text-align:center; margin-top:15px; }
-footer { text-align:center; margin-top:20px; color:#777; }
+.generate {
+    background:#0d6efd;
+    color:white;
+    font-size:16px;
+}
+
+footer {
+    text-align:center;
+    margin-top:25px;
+    color:#777;
+    font-size:14px;
+}
 </style>
 </head>
 
 <body>
+
+<!-- ✅ LOGO -->
+<div class="logo">
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+</div>
+
 <div class="app">
-<h2>Multi-Language Text to Voice</h2>
+<h2 style="text-align:center;">Multi-Language Text to Voice</h2>
 
 <label>Enter Text</label>
-<textarea id="text" maxlength="5000"></textarea>
+<textarea id="text" maxlength="5000" placeholder="Type your text here..."></textarea>
 
 <label>Language</label>
 <select id="language">
-<option>English</option>
-<option>Tamil</option>
-<option>Telugu</option>
-<option>Hindi</option>
-<option>Chinese</option>
+    <option>English</option>
+    <option>Tamil</option>
+    <option>Telugu</option>
+    <option>Hindi</option>
+    <option>Chinese</option>
 </select>
 
 <label>Gender</label>
 <select id="gender">
-<option>Female</option>
-<option>Male</option>
+    <option>Female</option>
+    <option>Male</option>
 </select>
 
 <label>Voice</label>
 <select id="voice"></select>
 
-<button class="demo" onclick="demo()">🎙 Demo</button>
+<button class="demo" onclick="demo()">🎙 Demo Voice</button>
 <button class="preview" onclick="preview()">🔊 Preview</button>
 
 <form method="post" action="/generate" onsubmit="beforeGenerate()">
-<input type="hidden" name="text" id="hText">
-<input type="hidden" name="voice" id="hVoice">
-<button class="generate">🎧 Generate & Download</button>
+    <input type="hidden" name="text" id="hText">
+    <input type="hidden" name="voice" id="hVoice">
+    <button class="generate">🎧 Generate & Download</button>
 </form>
 
-<div class="spinner" id="spinner">Generating audio…</div>
-<audio id="player" controls style="width:100%; display:none;"></audio>
-
-<footer>© 2025 Churchill J</footer>
+<footer>
+© 2025 Churchill J · <b>Powered by Churchill J</b>
+</footer>
 </div>
 
 <script>
 const VOICES = {
- English:{Female:["en-US-JennyNeural","en-US-AriaNeural","en-US-AnaNeural","en-GB-LibbyNeural","en-IN-NeerjaNeural"],
-          Male:["en-US-GuyNeural","en-US-DavisNeural","en-GB-RyanNeural","en-AU-WilliamNeural","en-IN-PrabhatNeural"]},
-
- Tamil:{Female:["ta-IN-PallaviNeural","ta-IN-KavyaNeural","ta-IN-ShanthiNeural","ta-IN-VaishaliNeural","ta-IN-MeenaNeural"],
-        Male:["ta-IN-ValluvarNeural","ta-IN-SuryaNeural","ta-IN-KarthikNeural","ta-IN-ArjunNeural","ta-IN-MuruganNeural"]},
-
- Telugu:{Female:["te-IN-ShrutiNeural","te-IN-SiriNeural","te-IN-AnuNeural","te-IN-LakshmiNeural","te-IN-KalpanaNeural"],
-         Male:["te-IN-MohanNeural","te-IN-RameshNeural","te-IN-KrishnaNeural","te-IN-SrinivasNeural","te-IN-RaviNeural"]},
-
- Hindi:{Female:["hi-IN-SwaraNeural","hi-IN-AditiNeural","hi-IN-PriyaNeural","hi-IN-KajalNeural","hi-IN-AnanyaNeural"],
-        Male:["hi-IN-MadhurNeural","hi-IN-RahulNeural","hi-IN-AmitNeural","hi-IN-VikramNeural","hi-IN-SureshNeural"]},
-
- Chinese:{Female:["zh-CN-XiaoxiaoNeural","zh-CN-XiaoyiNeural","zh-HK-HiuMaanNeural","zh-TW-HsiaoChenNeural","zh-CN-LingxiaNeural"],
-          Male:["zh-CN-YunxiNeural","zh-CN-YunjianNeural","zh-HK-WanLungNeural","zh-TW-YunJheNeural","zh-CN-YunzeNeural"]}
+English:{
+Female:["en-US-JennyNeural","en-US-AriaNeural","en-GB-LibbyNeural","en-AU-NatashaNeural","en-CA-ClaraNeural"],
+Male:["en-US-GuyNeural","en-US-DavisNeural","en-GB-RyanNeural","en-AU-WilliamNeural","en-CA-LiamNeural"]
+},
+Tamil:{
+Female:["ta-IN-PallaviNeural","ta-IN-RevathiNeural","ta-IN-ShrutiNeural","ta-IN-KavyaNeural","ta-IN-MeeraNeural"],
+Male:["ta-IN-ValluvarNeural","ta-IN-SuryaNeural","ta-IN-ArjunNeural","ta-IN-MuruganNeural","ta-IN-RajeshNeural"]
+},
+Telugu:{
+Female:["te-IN-ShrutiNeural","te-IN-SnehaNeural","te-IN-LakshmiNeural","te-IN-AnuNeural","te-IN-KavithaNeural"],
+Male:["te-IN-MohanNeural","te-IN-RaviNeural","te-IN-SaiNeural","te-IN-KiranNeural","te-IN-VenkatNeural"]
+},
+Hindi:{
+Female:["hi-IN-SwaraNeural","hi-IN-KalpanaNeural","hi-IN-AnanyaNeural","hi-IN-PoojaNeural","hi-IN-NehaNeural"],
+Male:["hi-IN-MadhurNeural","hi-IN-RajNeural","hi-IN-AmitNeural","hi-IN-SandeepNeural","hi-IN-VikasNeural"]
+},
+Chinese:{
+Female:["zh-CN-XiaoxiaoNeural","zh-CN-XiaoyiNeural","zh-CN-XiaohanNeural","zh-CN-XiaomengNeural","zh-CN-XiaoruiNeural"],
+Male:["zh-CN-YunxiNeural","zh-CN-YunjianNeural","zh-CN-YunyangNeural","zh-CN-YunzeNeural","zh-CN-YunfengNeural"]
+}
 };
 
-const lang=document.getElementById("language");
-const gender=document.getElementById("gender");
-const voice=document.getElementById("voice");
-const spinner=document.getElementById("spinner");
-const player=document.getElementById("player");
+const lang = document.getElementById("language");
+const gender = document.getElementById("gender");
+const voice = document.getElementById("voice");
 
 function updateVoices(){
- voice.innerHTML="";
- VOICES[lang.value][gender.value].forEach(v=>{
-   let o=document.createElement("option");
-   o.value=v; o.text=v;
-   voice.appendChild(o);
- });
+    voice.innerHTML="";
+    VOICES[lang.value][gender.value].forEach(v=>{
+        let o=document.createElement("option");
+        o.value=v;
+        o.text=v;
+        voice.appendChild(o);
+    });
 }
-lang.onchange=gender.onchange=updateVoices;
+lang.onchange = gender.onchange = updateVoices;
 updateVoices();
 
-function show(s){ spinner.style.display=s?"block":"none"; }
-
-function demo(){
- show(true);
- fetch("/demo",{method:"POST",headers:{"Content-Type":"application/json"},
- body:JSON.stringify({language:lang.value,voice:voice.value})})
- .then(r=>r.json()).then(d=>{ player.src=d.audio; player.style.display="block"; player.play(); show(false); });
-}
-
-function preview(){
- show(true);
- fetch("/preview",{method:"POST",headers:{"Content-Type":"application/json"},
- body:JSON.stringify({text:text.value,voice:voice.value})})
- .then(r=>r.json()).then(d=>{ player.src=d.audio; player.style.display="block"; player.play(); show(false); });
-}
-
+function demo(){}
+function preview(){}
 function beforeGenerate(){
- hText.value=text.value;
- hVoice.value=voice.value;
- show(true);
+    document.getElementById("hText").value=document.getElementById("text").value;
+    document.getElementById("hVoice").value=voice.value;
 }
 </script>
+
 </body>
 </html>
